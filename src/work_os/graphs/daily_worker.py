@@ -6,8 +6,10 @@ from langgraph.graph import END, StateGraph  # type: ignore
 
 from ..config import Settings
 from ..ingest.local_email import ingest_local_emails
+from ..ingest.outlook_win32 import OutlookIngestError, ingest_outlook_mail
 from ..ingest.uploaded_files import ingest_uploads
 from ..process.extract import safe_extract_signals_for_thread
+from ..process.filters import filter_events_for_processing
 from ..process.loops import signals_to_open_loops
 from ..process.threading import build_threads
 from ..report.daily import render_daily_open_loops_md
@@ -42,7 +44,16 @@ def build_daily_worker(settings: Settings):
 
 def _node_ingest(settings: Settings, state: DailyState) -> DailyState:
     conn = db.connect(settings.db_path)
-    email_events = ingest_local_emails(emails_dir=settings.local_emails_dir)
+    email_events = []
+    if settings.email_ingest_mode in ("local_json", "both"):
+        email_events.extend(ingest_local_emails(emails_dir=settings.local_emails_dir))
+    if settings.email_ingest_mode in ("outlook", "both"):
+        since_iso = state.get("since_iso") or "1970-01-01T00:00:00+00:00"
+        try:
+            email_events.extend(ingest_outlook_mail(since_iso=since_iso, account_hint=settings.outlook_account))
+        except OutlookIngestError:
+            if settings.email_ingest_mode == "outlook":
+                raise
     file_events = ingest_uploads(uploads_dir=settings.uploads_dir)
     count = db.upsert_events(conn, [*email_events, *file_events])
     conn.close()
@@ -53,6 +64,7 @@ def _node_thread(settings: Settings, state: DailyState) -> DailyState:
     since_iso = state.get("since_iso") or "1970-01-01T00:00:00+00:00"
     conn = db.connect(settings.db_path)
     events = db.fetch_events_since(conn, since_iso)
+    events = filter_events_for_processing(events, settings=settings)
     threads = build_threads(events)
     threads_count = db.upsert_threads(conn, threads)
     conn.close()
@@ -66,7 +78,7 @@ def _node_extract(settings: Settings, state: DailyState) -> DailyState:
     total_signals = 0
     total_loops = 0
     for thread in threads:
-        events = db.fetch_events_by_conversation(conn, thread.conversation_id)
+        events = db.fetch_events_by_ids(conn, thread.event_ids)
         signals = safe_extract_signals_for_thread(settings=settings, events=events)
         total_signals += db.insert_signals(conn, signals)
         loops = signals_to_open_loops(signals)

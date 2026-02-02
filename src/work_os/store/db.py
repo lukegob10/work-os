@@ -202,6 +202,40 @@ def fetch_events_by_conversation(conn: sqlite3.Connection, conversation_id: str)
     return out
 
 
+def fetch_events_by_ids(conn: sqlite3.Connection, event_ids: list[str]) -> list[CanonicalEvent]:
+    if not event_ids:
+        return []
+    placeholders = ",".join(["?"] * len(event_ids))
+    cur = conn.execute(
+        f"""
+        SELECT event_id, source, source_account, conversation_id, timestamp, participants_json, title,
+               body_text, extracted_text, attachments_or_links_json, raw_pointer
+        FROM events
+        WHERE event_id IN ({placeholders})
+        ORDER BY timestamp ASC
+        """,
+        tuple(event_ids),
+    )
+    out: list[CanonicalEvent] = []
+    for row in cur.fetchall():
+        out.append(
+            CanonicalEvent(
+                event_id=row["event_id"],
+                source=row["source"],
+                source_account=row["source_account"],
+                conversation_id=row["conversation_id"],
+                timestamp=row["timestamp"],
+                participants=json.loads(row["participants_json"] or "[]"),
+                title=row["title"],
+                body_text=row["body_text"],
+                extracted_text=row["extracted_text"],
+                attachments_or_links=json.loads(row["attachments_or_links_json"] or "[]"),
+                raw_pointer=row["raw_pointer"],
+            )
+        )
+    return out
+
+
 def upsert_threads(conn: sqlite3.Connection, threads: Iterable[ThreadRecord]) -> int:
     rows = [
         (
@@ -382,4 +416,3 @@ def dump_records(records: Iterable[Any]) -> list[dict[str, Any]]:
         else:
             out.append(dict(r))
     return out
-
