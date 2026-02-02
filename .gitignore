@@ -1,0 +1,13 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+
+# Local data (keep .gitkeep placeholders)
+data/*.db
+data/*.db-*
+data/uploads/*
+data/local_emails/*
+data/briefs/*
+!data/**/.gitkeep
+

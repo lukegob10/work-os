@@ -1,0 +1,31 @@
+Metadata-Version: 2.4
+Name: work-os
+Version: 0.1.0
+Summary: Personal Work OS (Pilot): email + uploaded files
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+Requires-Dist: langgraph>=0.2.0
+Requires-Dist: google-genai>=0.3.0
+Requires-Dist: pydantic>=2.7.0
+Provides-Extra: file-extract
+Requires-Dist: pypdf>=4.2.0; extra == "file-extract"
+Requires-Dist: python-docx>=1.1.2; extra == "file-extract"
+
+# Work OS (Pilot) — Email + Files (Python)
+
+Local-first “personal work OS” that ingests email + uploaded files into a canonical event store, then runs a **bounded ReAct-style** analysis loop using **LangGraph** and **`genai.Client`** (Gemini).
+
+## Quickstart
+1) Create a venv and install:
+   - `python3 -m venv .venv && source .venv/bin/activate`
+   - `pip install -e .`
+2) Configure env:
+   - `cp .env.example .env` and set `GEMINI_API_KEY`
+3) Put data in:
+   - Emails: `data/local_emails/*.json`
+   - Files: `data/uploads/*`
+4) Run daily pipeline (LangGraph):
+   - `python -m work_os run-daily --since 7d`
+
+Outputs land in `data/briefs/` and everything is stored in `data/work_os.db`.
+

@@ -1,0 +1,2 @@
+[console_scripts]
+work-os = work_os.cli:main
