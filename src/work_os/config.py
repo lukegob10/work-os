@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
@@ -59,9 +60,10 @@ def load_settings() -> Settings:
     llm_body_mode = _env("WORK_OS_LLM_BODY_MODE", "snippet") or "snippet"
     if llm_body_mode not in ("full", "snippet", "redacted"):
         llm_body_mode = "snippet"
-    email_ingest_mode = _env("WORK_OS_EMAIL_INGEST_MODE", "local_json") or "local_json"
+    default_email_mode = "outlook" if sys.platform == "win32" else "local_json"
+    email_ingest_mode = _env("WORK_OS_EMAIL_INGEST_MODE", default_email_mode) or default_email_mode
     if email_ingest_mode not in ("local_json", "outlook", "both"):
-        email_ingest_mode = "local_json"
+        email_ingest_mode = default_email_mode
     return Settings(
         db_path=_env_path("WORK_OS_DB_PATH", "data/work_os.db"),
         uploads_dir=_env_path("WORK_OS_UPLOADS_DIR", "data/uploads"),

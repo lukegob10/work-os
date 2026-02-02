@@ -85,13 +85,40 @@ def _get_mapi_namespace():
     if sys.platform != "win32":
         raise OutlookIngestError("Outlook win32 ingestion requires Windows (sys.platform == 'win32').")
     try:
+        import pythoncom  # type: ignore
+        import pywintypes  # type: ignore
         import win32com.client  # type: ignore
     except Exception as exc:  # pragma: no cover
         raise OutlookIngestError(
             "pywin32 is not installed. Install with: `pip install 'work-os[outlook]'`"
         ) from exc
 
-    outlook = win32com.client.Dispatch("Outlook.Application")
+    pythoncom.CoInitialize()
+    progids = [
+        "Outlook.Application",
+        "Outlook.Application.16",
+        "Outlook.Application.15",
+        "Outlook.Application.14",
+    ]
+    last_exc: pywintypes.com_error | None = None
+    outlook = None
+    for progid in progids:
+        try:
+            outlook = win32com.client.Dispatch(progid)
+            break
+        except pywintypes.com_error as exc:
+            last_exc = exc
+            outlook = None
+
+    if outlook is None:
+        if last_exc is not None and getattr(last_exc, "hresult", None) == -2147221005:
+            raise OutlookIngestError(
+                "Could not create the Outlook COM object (Outlook.Application). "
+                "This usually means Outlook desktop (classic) isn't installed, "
+                "you're using the New Outlook client (no COM automation), or Office/Outlook COM registration is broken. "
+                "Fixes: install/launch Outlook (classic), run `outlook.exe /regserver`, or Repair Office."
+            ) from last_exc
+        raise OutlookIngestError(f"Outlook COM error: {last_exc}") from last_exc
     return outlook.GetNamespace("MAPI")
 
 
@@ -283,4 +310,3 @@ def _to_utc(value: datetime) -> datetime:
         return value.astimezone(timezone.utc).replace(microsecond=0)
     except ValueError:
         return value.astimezone(timezone.utc).replace(microsecond=0)
-

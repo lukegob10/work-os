@@ -1,7 +1,13 @@
 langgraph>=0.2.0
 google-genai>=0.3.0
 pydantic>=2.7.0
+python-dotenv>=1.0.1
 
 [file_extract]
 pypdf>=4.2.0
 python-docx>=1.1.2
+
+[outlook]
+
+[outlook:platform_system == "Windows"]
+pywin32>=306

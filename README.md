@@ -4,8 +4,12 @@ Local-first “personal work OS” that ingests email + uploaded files into a ca
 
 ## Quickstart
 1) Create a venv and install:
-   - Windows: `py -m venv .venv && .venv\\Scripts\\activate`
-   - macOS/Linux: `python3 -m venv .venv && source .venv/bin/activate`
+   - Windows (PowerShell):
+     - `py -m venv .venv`
+     - `.venv\\Scripts\\Activate.ps1`
+   - macOS/Linux:
+     - `python3 -m venv .venv`
+     - `source .venv/bin/activate`
    - Install: `pip install -e .`
 2) Configure env:
    - `cp .env.example .env` and set `GEMINI_API_KEY`
@@ -38,6 +42,7 @@ This uses the signed-in Outlook desktop profile (no separate credential config i
 
 1) Install Outlook deps:
    - `pip install -e ".[outlook]"`
+   - Note: requires **Outlook (classic)** desktop. **New Outlook** does not expose the COM automation interface.
 2) List available mailboxes:
    - `work-os outlook-accounts`
 3) Ingest from Outlook:
